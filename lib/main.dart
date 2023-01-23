@@ -13,56 +13,108 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const HomePage(),
+      routes: {
+        '/new-contact': (context) => const NewContactView(),
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
+class Contact {
+  final String name;
+  const Contact({required this.name});
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class ContactBook {
+  //singleton - one instance in entire app
+  ContactBook._sharedInstance(); //private const.
+  static final ContactBook _shared = ContactBook._sharedInstance();
 
-  void _incrementCounter() {
-    setState(() {  
-      _counter++;
-    });
+  factory ContactBook() => _shared;
+
+  //storage for contacts
+  final List<Contact> _contacts = [];
+
+  int get length => _contacts.length;
+
+  void add({required Contact contact}) {
+    _contacts.add(contact);
   }
+
+  void remove({required Contact contact}) {
+    _contacts.remove(contact);
+  }
+
+  //return contact using its index
+  Contact? contact({required int atIndex}) =>
+      _contacts.length > atIndex ? _contacts[atIndex] : null;
+}
+
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    
+    //instance of ContactBook() to display contacts
+    final contactBook = ContactBook();
     return Scaffold(
       appBar: AppBar(
-        
-        title: Text(widget.title),
+        title: const Text('Home Page'),
       ),
-      body: Center(
-       
-        child: Column(
-          
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
+      body: ListView.builder(
+          itemCount: contactBook.length,
+          itemBuilder: (context, index) {
+            final contact = contactBook.contact(atIndex: index)!;
+            return ListTile(
+              //for every contact we want to display the ListTile and for that we will use contact atindex function defined above to create contact
+              title: Text(contact.name),
+            );
+          }),
+
+      //FAB to add new contacts to the list to be displayed
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
+        onPressed: () {
+          Navigator.of(context).pushNamed('/new-contact');
+        },
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+//to actually add contacts we need to create a stateful widget
+class NewContactView extends StatefulWidget {
+  const NewContactView({super.key});
+
+  @override
+  State<NewContactView> createState() => _NewContactViewState();
+}
+
+class _NewContactViewState extends State<NewContactView> {
+  late final TextEditingController _controller;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add a new Contact'),
+      ),
+      body: Column(
+        children: [
+          TextField(
+            controller: _controller,
+            decoration: const InputDecoration(
+              hintText: 'Enter a new Contact name here..',
+            ),
+          ),
+          TextButton(
+              onPressed: () {
+                final contact = Contact(name: _controller.text);
+                ContactBook().add(contact: contact);
+                Navigator.of(context).pop();
+              },
+              child: const Text('Add Contact'))
+        ],
       ),
     );
   }
